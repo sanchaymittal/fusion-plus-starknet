@@ -132,3 +132,11 @@ dist
 
 cache
 .idea
+
+
+# Starknet specific
+target
+.snfoundry_cache/
+snfoundry_trace/
+coverage/
+profile/
