@@ -1,0 +1,68 @@
+➜  starknet git:(main) ✗ ./declare-all.sh       
+Declaring all contracts...
+Declaring EscrowFactory...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 51 seconds
+command: declare
+class_hash: 0x035ca4ae1fcf504e3267f07f038b032ea858c0f695f29c93f1a3210230f426d9
+transaction_hash: 0x04dcaf7001e072bf00544c633bb6fa21ece79770e38a63bca7659367c4239d7c
+
+To see declaration details, visit:
+class: https://sepolia.starkscan.co/class/0x035ca4ae1fcf504e3267f07f038b032ea858c0f695f29c93f1a3210230f426d9
+transaction: https://sepolia.starkscan.co/tx/0x04dcaf7001e072bf00544c633bb6fa21ece79770e38a63bca7659367c4239d7c
+
+Declaring EscrowSrc...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 44 seconds
+command: declare
+class_hash: 0x06bf21832207a5e9bd734b88e88e8cd5ce2e67f7b4acfd787061c952f69a5688
+transaction_hash: 0x0171ad7975481e7e995ca5469d7dd3969cc84a3df2701efdd1ce7df73f390d18
+
+To see declaration details, visit:
+class: https://sepolia.starkscan.co/class/0x06bf21832207a5e9bd734b88e88e8cd5ce2e67f7b4acfd787061c952f69a5688
+transaction: https://sepolia.starkscan.co/tx/0x0171ad7975481e7e995ca5469d7dd3969cc84a3df2701efdd1ce7df73f390d18
+
+Declaring EscrowDst...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 39 seconds
+command: declare
+class_hash: 0x077682770ce5bec602a4ff216700a264d5491f8c7bb78da507d18ddfe3add268
+transaction_hash: 0x00bd6cfae54181a62e04cc18b17fe74b7afb5637568b580d99d7c896c04a470a
+
+To see declaration details, visit:
+class: https://sepolia.starkscan.co/class/0x077682770ce5bec602a4ff216700a264d5491f8c7bb78da507d18ddfe3add268
+transaction: https://sepolia.starkscan.co/tx/0x00bd6cfae54181a62e04cc18b17fe74b7afb5637568b580d99d7c896c04a470a
+
+Declaring BaseEscrow...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 41 seconds
+command: declare
+class_hash: 0x050e71ae69f703f756a88663aa31da3fa6373b82e926c74b7aa1810eed9c40e0
+transaction_hash: 0x0554a5ef2451e13d6c3811ecf0fb8bab25428de5e7f8617742fdcca48d8416e7
+
+To see declaration details, visit:
+class: https://sepolia.starkscan.co/class/0x050e71ae69f703f756a88663aa31da3fa6373b82e926c74b7aa1810eed9c40e0
+transaction: https://sepolia.starkscan.co/tx/0x0554a5ef2451e13d6c3811ecf0fb8bab25428de5e7f8617742fdcca48d8416e7
+
+Declaring MerkleVerifier...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 43 seconds
+command: declare
+error: Transaction execution error = TransactionExecutionErrorData { transaction_index: 0, execution_error: Message("Class with hash 0x02a77803062b9b39aba72278346e7d72b360a86b8f93380e0b5a66f04465e18d is already declared.") }
+Declaring MerkleStorageInvalidator...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 46 seconds
+command: declare
+error: Transaction execution error = TransactionExecutionErrorData { transaction_index: 0, execution_error: Message("Class with hash 0x052dac7266c56d49ca37921650065b72792be66b997658597128a01469c8ad65 is already declared.") }
+Declaring BaseExtension...
+    Blocking waiting for file lock on registry db cache
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 52 seconds
+command: declare
+error: Transaction execution error = TransactionExecutionErrorData { transaction_index: 0, execution_error: Message("Class with hash 0x025a8a8b688e9fa967284baa397f9af0b250d9995da5d54f3597cfafce881876 is already declared.") }
+Declaring MyToken (mock)...
+   Compiling cross_chain_swap v0.1.0 (/Users/sanchaymittal/github/fusion-plus-starknet/starknet/Scarb.toml)
+    Finished `release` profile target(s) in 43 seconds
+command: declare
+error: Transaction execution error = TransactionExecutionErrorData { transaction_index: 0, execution_error: Message("Class with hash 0x0063d951efb0c4280df78820f7c101cf2af5032d20e5b0555f9ac7ce24db53fa is already declared.") }
+All contracts declared!

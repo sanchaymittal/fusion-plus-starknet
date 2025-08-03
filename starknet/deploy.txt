@@ -1,0 +1,8 @@
+➜  starknet git:(main) ✗ ./escrow-factory-deploy.sh
+command: deploy
+contract_address: 0x0613303200348786097f8409c67208d189c4326762e20d9354659bef4a77522b
+transaction_hash: 0x053d34d35ed900776ee3ba1729a6a769309d884417886b1359c4266e257b8c62
+
+To see deployment details, visit:
+contract: https://sepolia.starkscan.co/contract/0x0613303200348786097f8409c67208d189c4326762e20d9354659bef4a77522b
+transaction: https://sepolia.starkscan.co/tx/0x053d34d35ed900776ee3ba1729a6a769309d884417886b1359c4266e257b8c62
