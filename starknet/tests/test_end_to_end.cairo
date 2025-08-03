@@ -14,7 +14,7 @@ use cross_chain_swap::{
     escrow_src::{IEscrowSrcDispatcher, IEscrowSrcDispatcherTrait},
     escrow_factory::{IEscrowFactoryDispatcher, IEscrowFactoryDispatcherTrait, ExtraDataArgs},
     escrow_base::{IBaseEscrowDispatcher, IBaseEscrowDispatcherTrait},
-    timelock::{TimelockDataStorePacking, TimelockData},
+    timelock::{Timelocks, TimelocksTrait},
     hashlock::{keccak_bytes32},
     merkle_validator::{IMerkleStorageInvalidator, IMerkleStorageInvalidatorDispatcher, IMerkleStorageInvalidatorDispatcherTrait, MerkleLeaf}
 };
@@ -132,9 +132,9 @@ mod MockMerkleInvalidator {
 }
 
 // Test constants
-const SECRET: felt252 = 0x123456789;
+const SECRET: u256 = 0x123456789;
 const AMOUNT: u256 = 1000000000000000000; // 1 token with 18 decimals
-const SALT: felt252 = 0x1;
+const SALT: u256 = 0x1;
 
 fn get_hashlock() -> u256 {
     keccak_bytes32(SECRET)
@@ -142,7 +142,7 @@ fn get_hashlock() -> u256 {
 
 fn deploy_mock_erc20() -> ContractAddress {
     let contract = declare("MockERC20").unwrap().contract_class();
-    let mut calldata: Array<felt252> = ArrayTrait::new();
+    let mut calldata: Array<u256> = ArrayTrait::new();
     // For now, deploy with empty calldata and mint tokens as needed in tests
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
     contract_address
@@ -150,7 +150,7 @@ fn deploy_mock_erc20() -> ContractAddress {
 
 fn deploy_mock_merkle_invalidator() -> ContractAddress {
     let contract = declare("MockMerkleInvalidator").unwrap().contract_class();
-    let mut calldata: Array<felt252> = ArrayTrait::new();
+    let mut calldata: Array<u256> = ArrayTrait::new();
     let (contract_address, _) = contract.deploy(@calldata).unwrap();
     contract_address
 }
@@ -164,7 +164,7 @@ fn deploy_escrow_factory_with_merkle(merkle_invalidator: ContractAddress) -> Con
     let escrow_src_class = declare("EscrowSrc").unwrap().contract_class();
     
     let contract = declare("EscrowFactory").unwrap().contract_class();
-    let mut calldata: Array<felt252> = ArrayTrait::new();
+    let mut calldata: Array<u256> = ArrayTrait::new();
     // owner
     calldata.append(0x123);
     // src_escrow_class_hash  
@@ -180,10 +180,8 @@ fn deploy_escrow_factory_with_merkle(merkle_invalidator: ContractAddress) -> Con
     contract_address
 }
 
-fn create_test_timelocks() -> u256 {
-    let _current_time = get_block_timestamp();
-    
-    let timelock_data = TimelockData {
+fn create_test_timelocks() -> Timelocks {
+    Timelocks {
         deployed_at: 0, // Will be set during deployment
         dst_withdrawal: 300,        // 5 minutes
         dst_public_withdrawal: 600, // 10 minutes  
@@ -192,9 +190,7 @@ fn create_test_timelocks() -> u256 {
         src_public_withdrawal: 1200, // 20 minutes
         src_cancellation: 2400,     // 40 minutes
         src_public_cancellation: 3600, // 60 minutes
-    };
-    
-    TimelockDataStorePacking::pack(timelock_data)
+    }
 }
 
 fn create_test_immutables(
@@ -314,8 +310,8 @@ fn test_starknet_as_source_resolver_withdraw() {
     
     // Create extra data for src escrow
     let extra_data = ExtraDataArgs {
-        hashlock_info: get_hashlock(),
-        timelocks: create_test_timelocks(),
+        hashlock: get_hashlock(),
+        deployed_at: 0, // Will be set by the contract
     };
     
     // Maker approves the factory to spend tokens
@@ -547,8 +543,8 @@ fn test_src_escrow_with_merkle_validation() {
     let encoded_hashlock_info = hashlock_raw; // Keep the original hashlock intact
     
     let extra_data = ExtraDataArgs {
-        hashlock_info: encoded_hashlock_info,
-        timelocks: create_test_timelocks(),
+        hashlock: encoded_hashlock_info,
+        deployed_at: 0, // Will be set by the contract
     };
     
     // Maker approves the factory to spend tokens
