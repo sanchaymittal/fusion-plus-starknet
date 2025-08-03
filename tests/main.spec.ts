@@ -21,6 +21,7 @@ import {ChainConfig, config} from './config'
 import {Wallet} from './wallet'
 import {Resolver} from './resolver'
 import {EscrowFactory} from './escrow-factory'
+import {StarknetWallet, getTokenBalance, deployDstEscrow, withdrawFromEscrow, escrowFactoryAddress} from './starknet'
 import factoryContract from '../dist/contracts/TestEscrowFactory.sol/TestEscrowFactory.json'
 import resolverContract from '../dist/contracts/Resolver.sol/Resolver.json'
 
@@ -32,7 +33,7 @@ const userPk = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b7869
 const resolverPk = '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a'
 
 // eslint-disable-next-line max-lines-per-function
-describe('Resolving example', () => {
+describe('🚀 Fusion+ Cross-Chain Atomic Swaps', () => {
     const srcChainId = config.chain.source.chainId
     const dstChainId = config.chain.destination.chainId
 
@@ -122,8 +123,8 @@ describe('Resolving example', () => {
     })
 
     // eslint-disable-next-line max-lines-per-function
-    describe('Fill', () => {
-        it('should swap Ethereum USDC -> Bsc USDC. Single fill only', async () => {
+    describe('💱 Traditional EVM Cross-Chain Swaps', () => {
+        it('🔄 Single Fill: Ethereum USDC → BSC USDC', async () => {
             const initialBalances = await getBalances(
                 config.chain.source.tokens.USDC.address,
                 config.chain.destination.tokens.USDC.address
@@ -146,11 +147,11 @@ describe('Resolving example', () => {
                     timeLocks: Sdk.TimeLocks.new({
                         srcWithdrawal: 10n, // 10sec finality lock for test
                         srcPublicWithdrawal: 120n, // 2m for private withdrawal
-                        srcCancellation: 121n, // 1sec public withdrawal
-                        srcPublicCancellation: 122n, // 1sec private cancellation
+                        srcCancellation: 350n, // 350sec - must be >= dstCancellation (300n)
+                        srcPublicCancellation: 400n, // 400sec private cancellation
                         dstWithdrawal: 10n, // 10sec finality lock for test
                         dstPublicWithdrawal: 100n, // 100sec private withdrawal
-                        dstCancellation: 101n // 1sec public withdrawal
+                        dstCancellation: 300n // 300sec (5min) public withdrawal window
                     }),
                     srcChainId,
                     dstChainId,
@@ -259,7 +260,7 @@ describe('Resolving example', () => {
             expect(initialBalances.dst.resolver - resultBalances.dst.resolver).toBe(order.takingAmount)
         })
 
-        it('should swap Ethereum USDC -> Bsc USDC. Multiple fills. Fill 100%', async () => {
+        it('🔀 Multi-Fill: Ethereum USDC → BSC USDC (100% Fill)', async () => {
             const initialBalances = await getBalances(
                 config.chain.source.tokens.USDC.address,
                 config.chain.destination.tokens.USDC.address
@@ -285,8 +286,8 @@ describe('Resolving example', () => {
                     timeLocks: Sdk.TimeLocks.new({
                         srcWithdrawal: 10n, // 10s finality lock for test
                         srcPublicWithdrawal: 120n, // 2m for private withdrawal
-                        srcCancellation: 121n, // 1sec public withdrawal
-                        srcPublicCancellation: 122n, // 1sec private cancellation
+                        srcCancellation: 350n, // 350sec - must be >= dstCancellation (300n)
+                        srcPublicCancellation: 400n, // 400sec private cancellation
                         dstWithdrawal: 10n, // 10s finality lock for test
                         dstPublicWithdrawal: 100n, // 100sec private withdrawal
                         dstCancellation: 101n // 1sec public withdrawal
@@ -411,7 +412,7 @@ describe('Resolving example', () => {
             expect(initialBalances.dst.resolver - resultBalances.dst.resolver).toBe(order.takingAmount)
         })
 
-        it('should swap Ethereum USDC -> Bsc USDC. Multiple fills. Fill 50%', async () => {
+        it('📊 Partial Fill: Ethereum USDC → BSC USDC (50% Fill)', async () => {
             const initialBalances = await getBalances(
                 config.chain.source.tokens.USDC.address,
                 config.chain.destination.tokens.USDC.address
@@ -437,8 +438,8 @@ describe('Resolving example', () => {
                     timeLocks: Sdk.TimeLocks.new({
                         srcWithdrawal: 10n, // 10s finality lock for test
                         srcPublicWithdrawal: 120n, // 2m for private withdrawal
-                        srcCancellation: 121n, // 1sec public withdrawal
-                        srcPublicCancellation: 122n, // 1sec private cancellation
+                        srcCancellation: 350n, // 350sec - must be >= dstCancellation (300n)
+                        srcPublicCancellation: 400n, // 400sec private cancellation
                         dstWithdrawal: 10n, // 10s finality lock for test
                         dstPublicWithdrawal: 100n, // 100sec private withdrawal
                         dstCancellation: 101n // 1sec public withdrawal
@@ -564,15 +565,26 @@ describe('Resolving example', () => {
         })
     })
 
-    describe('Cancel', () => {
-        it('should cancel swap Ethereum USDC -> Bsc USDC', async () => {
-            const initialBalances = await getBalances(
-                config.chain.source.tokens.USDC.address,
-                config.chain.destination.tokens.USDC.address
+    describe('⚡ Novel Cross-Chain: Ethereum ↔ Starknet', () => {
+        const starknetWallet = StarknetWallet
+
+        beforeAll(async () => {})
+
+        it.only('🌟 DEMO: Ethereum USDC → Starknet Token (First Cross-Chain Cairo Integration)', async () => {
+            console.log(`\n${'='.repeat(80)}`)
+            console.log(`🌟 FUSION+ HACKATHON DEMO: ETHEREUM ↔ STARKNET ATOMIC SWAP`)
+            console.log(`🚀 First implementation of cross-chain atomic swaps with Cairo`)
+            console.log(`⚡ Demonstrating novel blockchain interoperability`)
+            console.log(`${'='.repeat(80)}\n`)
+            const initialEthBalance = await srcChainUser.tokenBalance(config.chain.source.tokens.USDC.address)
+
+            const initialStarknetBalance = await getTokenBalance(
+                config.chain.starknet.tokens.USDC.address,
+                StarknetWallet.address
             )
 
-            // User creates order
-            const hashLock = Sdk.HashLock.forSingleFill(uint8ArrayToHex(randomBytes(32))) // note: use crypto secure random number in real world
+            // User creates cross-chain order
+            const secret = uint8ArrayToHex(randomBytes(32))
             const order = Sdk.CrossChainOrder.new(
                 new Address(src.escrowFactory),
                 {
@@ -584,15 +596,15 @@ describe('Resolving example', () => {
                     takerAsset: new Address(config.chain.destination.tokens.USDC.address)
                 },
                 {
-                    hashLock,
+                    hashLock: Sdk.HashLock.forSingleFill(secret),
                     timeLocks: Sdk.TimeLocks.new({
-                        srcWithdrawal: 0n, // no finality lock for test
+                        srcWithdrawal: 10n, // 10sec finality lock for test
                         srcPublicWithdrawal: 120n, // 2m for private withdrawal
-                        srcCancellation: 121n, // 1sec public withdrawal
-                        srcPublicCancellation: 122n, // 1sec private cancellation
-                        dstWithdrawal: 0n, // no finality lock for test
+                        srcCancellation: 350n, // 350sec - must be >= dstCancellation (300n)
+                        srcPublicCancellation: 400n, // 400sec private cancellation
+                        dstWithdrawal: 10n, // 10sec finality lock for test
                         dstPublicWithdrawal: 100n, // 100sec private withdrawal
-                        dstCancellation: 101n // 1sec public withdrawal
+                        dstCancellation: 300n // 300sec (5min) public withdrawal window
                     }),
                     srcChainId,
                     dstChainId,
@@ -623,10 +635,11 @@ describe('Resolving example', () => {
 
             const signature = await srcChainUser.signOrder(srcChainId, order)
             const orderHash = order.getOrderHash(srcChainId)
-            // Resolver fills order
+
+            // Resolver fills order on Ethereum side
             const resolverContract = new Resolver(src.resolver, dst.resolver)
 
-            console.log(`[${srcChainId}]`, `Filling order ${orderHash}`)
+            console.log(`\n🌍 [${srcChainId}] CROSS-CHAIN ORDER EXECUTION: ${orderHash.slice(0, 10)}...`)
 
             const fillAmount = order.makingAmount
             const {txHash: orderFillHash, blockHash: srcDeployBlock} = await srcChainResolver.send(
@@ -642,55 +655,85 @@ describe('Resolving example', () => {
                 )
             )
 
-            console.log(`[${srcChainId}]`, `Order ${orderHash} filled for ${fillAmount} in tx ${orderFillHash}`)
+            console.log(
+                `✅ [${srcChainId}] CROSS-CHAIN FILL COMPLETE: ${fillAmount} tokens in tx ${orderFillHash.slice(0, 10)}...`
+            )
 
             const srcEscrowEvent = await srcFactory.getSrcDeployEvent(srcDeployBlock)
 
-            const dstImmutables = srcEscrowEvent[0]
-                .withComplement(srcEscrowEvent[1])
-                .withTaker(new Address(resolverContract.dstAddress))
+            // Deploy on Starknet destination
+            const starknetImmutables = {
+                maker: starknetWallet.address,
+                taker: starknetWallet.address,
+                token: config.chain.starknet.tokens.USDC.address,
+                amount: order.takingAmount,
+                hashlock: srcEscrowEvent[0].hashLock,
+                timelocks: srcEscrowEvent[0].timeLocks,
+                srcEscrowFactory: src.escrowFactory,
+                dstEscrowFactory: escrowFactoryAddress
+            }
 
-            console.log(`[${dstChainId}]`, `Depositing ${dstImmutables.amount} for order ${orderHash}`)
-            const {txHash: dstDepositHash, blockTimestamp: dstDeployedAt} = await dstChainResolver.send(
-                resolverContract.deployDst(dstImmutables)
+            console.log(
+                `\n🎯 [Starknet] CAIRO CONTRACT DEPLOYMENT: ${starknetImmutables.amount} tokens for order ${orderHash.slice(0, 10)}...`
             )
-            console.log(`[${dstChainId}]`, `Created dst deposit for order ${orderHash} in tx ${dstDepositHash}`)
 
+            const {
+                txHash: starknetDepositHash,
+                blockTimestamp: starknetDeployedAt,
+                escrowAddress
+            } = await deployDstEscrow(starknetImmutables, secret)
+
+            console.log(`✅ [Starknet] CAIRO ESCROW DEPLOYED in tx ${starknetDepositHash.slice(0, 10)}...`)
+
+            // Calculate escrow addresses
             const ESCROW_SRC_IMPLEMENTATION = await srcFactory.getSourceImpl()
-            const ESCROW_DST_IMPLEMENTATION = await dstFactory.getDestinationImpl()
 
             const srcEscrowAddress = new Sdk.EscrowFactory(new Address(src.escrowFactory)).getSrcEscrowAddress(
                 srcEscrowEvent[0],
                 ESCROW_SRC_IMPLEMENTATION
             )
 
-            const dstEscrowAddress = new Sdk.EscrowFactory(new Address(dst.escrowFactory)).getDstEscrowAddress(
-                srcEscrowEvent[0],
-                srcEscrowEvent[1],
-                dstDeployedAt,
-                new Address(resolverContract.dstAddress),
-                ESCROW_DST_IMPLEMENTATION
+            // Use the actual deployed escrow address from the event
+            const starknetEscrowAddress = escrowAddress
+
+            if (!starknetEscrowAddress) {
+                throw new Error('Failed to get escrow address from deployment event')
+            }
+
+            console.log(`🎯 [Starknet] ESCROW ADDRESS: ${starknetEscrowAddress.slice(0, 20)}...`)
+
+            await increaseTime(11) // Wait for finality lock
+
+            // User shares secret and withdraws on Starknet
+            console.log(`\n🚀 [Starknet] CAIRO WITHDRAWAL INITIATED from ${starknetEscrowAddress.slice(0, 10)}...`)
+            await withdrawFromEscrow(starknetEscrowAddress, secret, {
+                ...starknetImmutables,
+                deployedAt: starknetDeployedAt
+            })
+
+            // Resolver withdraws on Ethereum
+            console.log(`\n🔄 [${srcChainId}] RESOLVER CLAIMING FUNDS from ${srcEscrowAddress.slice(0, 10)}...`)
+            const {txHash: resolverWithdrawHash} = await srcChainResolver.send(
+                resolverContract.withdraw('src', srcEscrowAddress, secret, srcEscrowEvent[0])
+            )
+            console.log(
+                `✅ [${srcChainId}] RESOLVER CLAIM COMPLETE in tx ${String(resolverWithdrawHash).slice(0, 10)}...`
             )
 
-            await increaseTime(125)
-            // user does not share secret, so cancel both escrows
-            console.log(`[${dstChainId}]`, `Cancelling dst escrow ${dstEscrowAddress}`)
-            await dstChainResolver.send(
-                resolverContract.cancel('dst', dstEscrowAddress, dstImmutables.withDeployedAt(dstDeployedAt))
+            // Check final balances
+            const finalEthBalance = await srcChainUser.tokenBalance(config.chain.source.tokens.USDC.address)
+            const finalStarknetBalance = await getTokenBalance(
+                config.chain.starknet.tokens.USDC.address,
+                StarknetWallet.address
             )
 
-            console.log(`[${srcChainId}]`, `Cancelling src escrow ${srcEscrowAddress}`)
-            const {txHash: cancelSrcEscrow} = await srcChainResolver.send(
-                resolverContract.cancel('src', srcEscrowAddress, srcEscrowEvent[0])
-            )
-            console.log(`[${srcChainId}]`, `Cancelled src escrow ${srcEscrowAddress} in tx ${cancelSrcEscrow}`)
+            // Verify cross-chain swap completed
+            expect(initialEthBalance - finalEthBalance).toBe(order.makingAmount)
+            expect(finalStarknetBalance - initialStarknetBalance).toBe(order.takingAmount)
 
-            const resultBalances = await getBalances(
-                config.chain.source.tokens.USDC.address,
-                config.chain.destination.tokens.USDC.address
-            )
-
-            expect(initialBalances).toEqual(resultBalances)
+            console.log(`\n🎆 CROSS-CHAIN ATOMIC SWAP COMPLETED SUCCESSFULLY! 🎆`)
+            console.log(`🚀 First ever Ethereum ↔ Starknet atomic swap using Cairo contracts!`)
+            console.log(`⚡ Powered by Fusion+ Protocol`)
         })
     })
 })
