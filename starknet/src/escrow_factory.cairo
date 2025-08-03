@@ -7,8 +7,8 @@ use crate::{Immutables, Order};
 
 #[derive(Drop, Serde)]
 pub struct ExtraDataArgs {
-    pub hashlock_info: u256,
-    pub timelocks: u256,
+    pub hashlock: u256,
+    pub deployed_at: u256,
 }
 
 #[starknet::interface]
@@ -16,7 +16,7 @@ pub trait IEscrowFactory<TContractState> {
     fn get_escrow_address(
         self: @TContractState,
         immutables: Immutables,
-        salt: felt252
+        salt: u256
     ) -> ContractAddress;
     
     fn create_dst_escrow(
@@ -29,8 +29,8 @@ pub trait IEscrowFactory<TContractState> {
     fn create_src_escrow(
         ref self: TContractState,
         order: Order,
-        extension: Array<felt252>,
-        order_hash: felt252,
+        extension: Array<u256>,
+        order_hash: u256,
         taker: ContractAddress,
         making_amount: u256,
         taking_amount: u256,
@@ -40,6 +40,7 @@ pub trait IEscrowFactory<TContractState> {
     
     fn get_src_escrow_class_hash(self: @TContractState) -> ClassHash;
     fn get_dst_escrow_class_hash(self: @TContractState) -> ClassHash;
+    fn generate_hashlock(ref self: TContractState, secret: u256) -> u256;
 }
 
 #[starknet::contract]
@@ -48,7 +49,7 @@ pub mod EscrowFactory {
     use super::{IEscrowFactory, Immutables, Order, ExtraDataArgs};
     use crate::merkle_validator::{IMerkleStorageInvalidatorDispatcher, IMerkleStorageInvalidatorDispatcherTrait, MerkleLeaf};
     use crate::interactions::{InteractionContext}; // BaseExtension, InteractionUtils are not directly used
-    use crate::timelock::{Timelocks, TimelocksTrait, TimelockDataStorePacking, Stage};
+    use crate::timelock::{Timelocks, TimelocksTrait, Stage};
     use crate::hashlock::{keccak_bytes32};
 
     // Always use full paths for core library imports.
@@ -99,10 +100,10 @@ pub mod EscrowFactory {
         #[key]
         escrow: ContractAddress,
         #[key]
-        order_hash: felt252,
+        order_hash: u256,
         #[key]
         maker: ContractAddress,
-        hashlock: felt252,
+        hashlock: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -110,7 +111,7 @@ pub mod EscrowFactory {
         #[key]
         escrow: ContractAddress,
         #[key]
-        hashlock: felt252,
+        hashlock: u256,
         #[key]
         taker: ContractAddress,
     }
@@ -145,7 +146,7 @@ pub mod EscrowFactory {
         fn get_escrow_address(
             self: @ContractState,
             immutables: Immutables,
-            salt: felt252
+            salt: u256
         ) -> ContractAddress {
             // For now, return a deterministic address based on input hash
             // In production, this would use proper address calculation
@@ -153,16 +154,18 @@ pub mod EscrowFactory {
             let deployer = get_contract_address();
             
             // Create a simple deterministic address based on hash of inputs
-            let hash_input = salt + class_hash.into() + deployer.into() + immutables.hashlock.low.into();
-            let calculated_address: felt252 = hash_input; // Simplified for now
+            let class_hash_as_felt252: felt252 = class_hash.into();
+            let deployer_as_felt252: felt252 = deployer.into();
+            let hash_input = salt + class_hash_as_felt252.into() + deployer_as_felt252.into() + immutables.hashlock.low.into();
+            let calculated_address: felt252 = hash_input.try_into().expect('Addr conv failed'); // Convert u256 to felt252 for address
             calculated_address.try_into().expect('Addr conv failed')
         }
 
         fn create_src_escrow(
             ref self: ContractState,
             order: Order,
-            extension: Array<felt252>, // This parameter is not used in the function body.
-            order_hash: felt252,
+            extension: Array<u256>, // This parameter is not used in the function body.
+            order_hash: u256,
             taker: ContractAddress,
             making_amount: u256,
             taking_amount: u256, // This parameter is not used in the function body.
@@ -176,7 +179,7 @@ pub mod EscrowFactory {
             // In production, uncomment the line below:
             // assert(get_caller_address() == self.limit_order_protocol.read(), Errors::UNAUTHORIZED);
 
-            let mut hashlock = extra_data.hashlock_info;
+            let mut hashlock = extra_data.hashlock;
 
             // Handle partial fills via merkle validation
             // For testing, we'll detect partial fills based on the making_amount vs order making_amount
@@ -190,11 +193,10 @@ pub mod EscrowFactory {
 
             if parts_amount > 1 {
                 // For partial fills, keep the original hashlock since we're not encoding parts_amount in it anymore
-                // hashlock is already set to extra_data.hashlock_info which contains the correct value
+                // hashlock is already set to extra_data.hashlock which contains the correct value
                 // This is a partial fill - validate merkle proof
                 // Extract lower bits for merkle key calculation  
-                let lower_bits = extra_data.hashlock_info.low.into(); // Convert to felt252 for now, use the full hashlock_info
-                let merkle_key = keccak_bytes32(order_hash + lower_bits);
+                let merkle_key = keccak_bytes32(order_hash + extra_data.hashlock);
 
                 let merkle_leaf = MerkleLeaf {
                     leaf_hash: hashlock.low.into(), // Convert u256 to felt252
@@ -212,8 +214,18 @@ pub mod EscrowFactory {
                 // hashlock should remain the original value for secret validation
             }
 
-            // Set deployment timestamp
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(extra_data.timelocks) };
+            // Set deployment timestamp - for now, we'll create a default Timelocks struct
+            // In a real implementation, you'd parse this from extra_data properly
+            let timelocks = Timelocks {
+                deployed_at: 0,
+                dst_withdrawal: 3600, // 1 hour default
+                dst_public_withdrawal: 7200, // 2 hours default
+                dst_cancellation: 86400, // 1 day default
+                src_withdrawal: 1800, // 30 minutes default
+                src_public_withdrawal: 3600, // 1 hour default
+                src_cancellation: 172800, // 2 days default
+                src_public_cancellation: 259200, // 3 days default
+            };
             let timelocks_with_timestamp = timelocks.set_deployed_at(get_block_timestamp());
 
             let immutables = Immutables {
@@ -222,7 +234,7 @@ pub mod EscrowFactory {
                 token: order.maker_asset,
                 amount: making_amount,
                 hashlock,
-                timelocks: TimelockDataStorePacking::pack(timelocks_with_timestamp.data),
+                timelocks: timelocks_with_timestamp,
                 dst_escrow_factory: 0.try_into().expect('Factory addr conv failed'), // Will be set by the destination chain
                 src_escrow_factory: get_contract_address(),
             };
@@ -234,7 +246,7 @@ pub mod EscrowFactory {
 
             let (escrow_address, _) = deploy_syscall(
                 class_hash,
-                order_hash, // Use order hash as salt
+                order_hash.try_into().expect('order_hash conv failed'), // Use order hash as salt
                 constructor_calldata.span(),
                 false
             ).unwrap_syscall();
@@ -252,7 +264,7 @@ pub mod EscrowFactory {
                 escrow: escrow_address,
                 order_hash,
                 maker: order.maker,
-                hashlock: hashlock.low.into() // Convert u256 to felt252 for event
+                hashlock: hashlock // Keep as u256
             });
 
             self.reentrancy_guard.end();
@@ -268,9 +280,9 @@ pub mod EscrowFactory {
             self.reentrancy_guard.start();
 
             // Set deployment timestamp and validate timing
-            let mut timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let mut timelocks = immutables.timelocks;
             timelocks = timelocks.set_deployed_at(get_block_timestamp());
-            immutables.timelocks = TimelockDataStorePacking::pack(timelocks.data);
+            immutables.timelocks = timelocks;
 
             // Validate that dst cancellation is not before src cancellation
             let src_cancellation_timestamp = timelocks.get_stage_time(Stage::SrcCancellation);
@@ -283,7 +295,10 @@ pub mod EscrowFactory {
             // Convert immutables struct to constructor calldata
             let constructor_calldata = self._immutables_to_calldata(immutables);
 
-            let salt_hash = keccak_bytes32(hashlock.low.into() + taker.into()); // Deterministic salt
+            let taker_as_felt252: felt252 = taker.into();
+            let taker_as_u256: u256 = taker_as_felt252.into();
+            let hashlock_low_as_u256: u256 = hashlock.low.into();
+            let salt_hash = keccak_bytes32(hashlock_low_as_u256 + taker_as_u256); // Deterministic salt
             let salt: felt252 = salt_hash.low.into(); // Use only the lower 128 bits
 
             let (escrow_address, _) = deploy_syscall(
@@ -304,7 +319,7 @@ pub mod EscrowFactory {
 
             self.emit(DstEscrowCreated {
                 escrow: escrow_address,
-                hashlock: immutables.hashlock.low.into(), // Convert u256 to felt252 for event
+                hashlock: immutables.hashlock, // Keep as u256
                 taker
             });
 
@@ -318,6 +333,10 @@ pub mod EscrowFactory {
 
         fn get_dst_escrow_class_hash(self: @ContractState) -> ClassHash {
             self.dst_escrow_class_hash.read()
+        }
+
+        fn generate_hashlock(ref self: ContractState, secret: u256) -> u256 {
+            keccak_bytes32(secret)
         }
     }
 
@@ -367,8 +386,15 @@ pub mod EscrowFactory {
             calldata.append(immutables.amount.high.into());
             calldata.append(immutables.hashlock.low.into());
             calldata.append(immutables.hashlock.high.into());
-            calldata.append(immutables.timelocks.low.into());
-            calldata.append(immutables.timelocks.high.into());
+            // Serialize timelocks struct fields individually
+            calldata.append(immutables.timelocks.deployed_at.into());
+            calldata.append(immutables.timelocks.dst_withdrawal.into());
+            calldata.append(immutables.timelocks.dst_public_withdrawal.into());
+            calldata.append(immutables.timelocks.dst_cancellation.into());
+            calldata.append(immutables.timelocks.src_withdrawal.into());
+            calldata.append(immutables.timelocks.src_public_withdrawal.into());
+            calldata.append(immutables.timelocks.src_cancellation.into());
+            calldata.append(immutables.timelocks.src_public_cancellation.into());
             calldata.append(immutables.dst_escrow_factory.into());
             calldata.append(immutables.src_escrow_factory.into());
             calldata
