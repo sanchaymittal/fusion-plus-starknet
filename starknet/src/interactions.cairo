@@ -7,12 +7,12 @@ use crate::{Order};
 #[derive(Drop, Serde)]
 pub struct InteractionContext {
     pub order: Order,
-    pub order_hash: felt252,
+    pub order_hash: u256,
     pub taker: ContractAddress,
     pub making_amount: u256,
     pub taking_amount: u256,
     pub remaining_making_amount: u256,
-    pub extra_data: Array<felt252>,
+    pub extra_data: Array<u256>,
 }
 
 // Pre-interaction interface - called before fund transfers
@@ -66,21 +66,21 @@ pub mod BaseExtension {
     #[derive(Drop, starknet::Event)]
     struct PreInteractionExecuted {
         #[key]
-        order_hash: felt252,
+        order_hash: u256,
         taker: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     struct PostInteractionExecuted {
         #[key]
-        order_hash: felt252,
+        order_hash: u256,
         taker: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)] // Added for ITakerInteraction
     struct TakerInteractionExecuted {
         #[key]
-        order_hash: felt252,
+        order_hash: u256,
         taker: ContractAddress,
     }
 
@@ -181,12 +181,12 @@ pub mod InteractionUtils {
 
     pub fn create_context(
         order: Order,
-        order_hash: felt252,
+        order_hash: u256,
         taker: ContractAddress,
         making_amount: u256,
         taking_amount: u256,
         remaining_making_amount: u256,
-        extra_data: Array<felt252>
+        extra_data: Array<u256>
     ) -> InteractionContext {
         InteractionContext {
             order,
