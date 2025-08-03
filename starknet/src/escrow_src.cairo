@@ -5,7 +5,7 @@ use crate::Immutables;
 
 #[starknet::interface]
 pub trait IEscrowSrc<TContractState> {
-    fn withdraw_public(ref self: TContractState, immutables: Immutables, secret: felt252);
+    fn withdraw_public(ref self: TContractState, immutables: Immutables, secret: u256);
     fn cancel_public(ref self: TContractState, immutables: Immutables);
     fn cancel_private(ref self: TContractState, immutables: Immutables);
 }
@@ -15,7 +15,7 @@ pub mod EscrowSrc {
     use super::{IEscrowSrc, Immutables};
     use crate::escrow_base::{IBaseEscrow, RESCUE_DELAY};
     use crate::hashlock::{HashlockValidatorTrait, Errors as HashlockErrors};
-    use crate::timelock::{Timelocks, TimelocksTrait, TimelockDataStorePacking, Stage};
+    use crate::timelock::{TimelocksTrait, Stage};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use openzeppelin::token::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
@@ -74,7 +74,7 @@ pub mod EscrowSrc {
         #[key]
         withdrawer: ContractAddress,
         amount: u256,
-        secret: felt252,
+        secret: u256,
     }
     
     #[derive(Drop, starknet::Event)]
@@ -84,7 +84,7 @@ pub mod EscrowSrc {
         #[key]
         withdrawer: ContractAddress,
         amount: u256,
-        secret: felt252,
+        secret: u256,
     }
     
     #[derive(Drop, starknet::Event)]
@@ -150,7 +150,7 @@ pub mod EscrowSrc {
             self.immutables.read()
         }
         
-        fn withdraw(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn withdraw(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.reentrancy_guard.start();
             
             // Private withdrawal: only maker during SrcWithdrawal period
@@ -193,7 +193,7 @@ pub mod EscrowSrc {
             self.ownable.assert_only_owner();
             
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             let rescue_time = timelocks.rescue_start(RESCUE_DELAY);
             
             assert(get_block_timestamp() >= rescue_time, 'Too early for rescue');
@@ -208,7 +208,7 @@ pub mod EscrowSrc {
     
     #[abi(embed_v0)]
     impl EscrowSrcImpl of IEscrowSrc<ContractState> {
-        fn withdraw_public(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn withdraw_public(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.reentrancy_guard.start();
             
             // Public withdrawal: anyone during SrcPublicWithdrawal period
@@ -295,7 +295,7 @@ pub mod EscrowSrc {
             assert(immutables.timelocks == stored_immutables.timelocks, Errors::INVALID_IMMUTABLES);
         }
         
-        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.is_withdrawn.write(true);
             
             let token = ERC20ABIDispatcher { contract_address: immutables.token };
@@ -326,14 +326,14 @@ pub mod EscrowSrc {
         
         fn _check_timelock_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_stage_active(stage), 'Too early');
         }
         
         fn _check_before_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_before_stage(stage), 'Too late');
         }

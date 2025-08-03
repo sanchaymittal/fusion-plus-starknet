@@ -5,7 +5,7 @@ use crate::Immutables;
 
 #[starknet::interface]
 pub trait IEscrowDst<TContractState> {
-    fn withdraw_public(ref self: TContractState, immutables: Immutables, secret: felt252);
+    fn withdraw_public(ref self: TContractState, immutables: Immutables, secret: u256);
     fn cancel_private(ref self: TContractState, immutables: Immutables);
 }
 
@@ -14,7 +14,7 @@ pub mod EscrowDst {
     use super::{IEscrowDst, Immutables};
     use crate::escrow_base::{IBaseEscrow};
     use crate::hashlock::{HashlockValidatorTrait, Errors as HashlockErrors};
-    use crate::timelock::{Timelocks, TimelocksTrait, TimelockDataStorePacking, Stage};
+    use crate::timelock::{TimelocksTrait, Stage};
     use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use openzeppelin::token::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
@@ -59,7 +59,7 @@ pub mod EscrowDst {
         #[key]
         withdrawer: ContractAddress,
         amount: u256,
-        secret: felt252,
+        secret: u256,
     }
     
     #[derive(Drop, starknet::Event)]
@@ -77,10 +77,15 @@ pub mod EscrowDst {
     }
     
     #[constructor]
-    fn constructor(ref self: ContractState, immutables: Immutables) {
+    fn constructor(ref self: ContractState, mut immutables: Immutables) {
         self.ownable.initializer(immutables.maker);
+        
+        // Set the deployed_at timestamp in timelocks
+        let current_time = starknet::get_block_timestamp();
+        immutables.timelocks = immutables.timelocks.set_deployed_at(current_time);
+        
         self.immutables.write(immutables);
-        self.deployed_at.write(starknet::get_block_timestamp());
+        self.deployed_at.write(current_time);
         
         // Token transfer will be handled by the factory after deployment
     }
@@ -91,7 +96,7 @@ pub mod EscrowDst {
             self.immutables.read()
         }
         
-        fn withdraw(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn withdraw(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.reentrancy_guard.start();
             
             // Private withdrawal: only taker during DstWithdrawal period
@@ -133,7 +138,7 @@ pub mod EscrowDst {
             self.ownable.assert_only_owner();
             
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             let rescue_time = timelocks.rescue_start(crate::escrow_base::RESCUE_DELAY);
             
             assert(starknet::get_block_timestamp() >= rescue_time, 'Too early for rescue');
@@ -146,7 +151,7 @@ pub mod EscrowDst {
     
     #[abi(embed_v0)]
     impl EscrowDstImpl of IEscrowDst<ContractState> {
-        fn withdraw_public(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn withdraw_public(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.reentrancy_guard.start();
             
             // Public withdrawal: anyone during DstPublicWithdrawal period  
@@ -211,7 +216,7 @@ pub mod EscrowDst {
             assert(immutables.timelocks == stored_immutables.timelocks, 'Invalid immutables');
         }
         
-        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.is_withdrawn.write(true);
             
             let token = ERC20ABIDispatcher { contract_address: immutables.token };
@@ -229,14 +234,14 @@ pub mod EscrowDst {
         
         fn _check_timelock_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_stage_active(stage), 'Too early');
         }
         
         fn _check_before_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_before_stage(stage), 'Too late');
         }

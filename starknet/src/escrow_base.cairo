@@ -9,7 +9,7 @@ pub const RESCUE_DELAY: u64 = 365 * 24 * 60 * 60; // 1 year in seconds
 #[starknet::interface]
 pub trait IBaseEscrow<TContractState> {
     fn get_immutables(self: @TContractState) -> Immutables;
-    fn withdraw(ref self: TContractState, immutables: Immutables, secret: felt252);
+    fn withdraw(ref self: TContractState, immutables: Immutables, secret: u256);
     fn cancel(ref self: TContractState, immutables: Immutables);
     fn rescue(ref self: TContractState, token: ContractAddress, amount: u256);
 }
@@ -18,7 +18,7 @@ pub trait IBaseEscrow<TContractState> {
 pub mod BaseEscrow {
     use super::{IBaseEscrow, Immutables, RESCUE_DELAY};
     use crate::hashlock::{HashlockValidatorTrait, Errors as HashlockErrors};
-    use crate::timelock::{Timelocks, TimelocksTrait, TimelockDataStorePacking, Stage, Errors as TimelockErrors};
+    use crate::timelock::{TimelocksTrait, Stage, Errors as TimelockErrors};
     use starknet::ContractAddress;
     use starknet::{get_caller_address, get_block_timestamp, get_contract_address};
     use starknet::storage::*;
@@ -75,7 +75,7 @@ pub mod BaseEscrow {
         #[key]
         withdrawer: ContractAddress,
         amount: u256,
-        secret: felt252,
+        secret: u256,
     }
     
     #[derive(Drop, starknet::Event)]
@@ -131,7 +131,7 @@ pub mod BaseEscrow {
             self.immutables.read()
         }
         
-        fn withdraw(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn withdraw(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.reentrancy_guard.start();
             
             self._validate_immutables(immutables);
@@ -163,7 +163,7 @@ pub mod BaseEscrow {
             self.ownable.assert_only_owner();
             
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             let rescue_time = timelocks.rescue_start(RESCUE_DELAY);
             
             assert(get_block_timestamp() >= rescue_time, TimelockErrors::TOO_EARLY);
@@ -189,7 +189,7 @@ pub mod BaseEscrow {
             assert(immutables.timelocks == stored_immutables.timelocks, Errors::INVALID_IMMUTABLES);
         }
         
-        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: felt252) {
+        fn _perform_withdrawal(ref self: ContractState, immutables: Immutables, secret: u256) {
             self.is_withdrawn.write(true);
             
             let erc20_dispatcher = IERC20Dispatcher { contract_address: immutables.token };
@@ -220,14 +220,14 @@ pub mod BaseEscrow {
         
         fn _check_timelock_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_stage_active(stage), TimelockErrors::TOO_EARLY);
         }
         
         fn _check_before_stage(self: @ContractState, stage: Stage) {
             let immutables = self.immutables.read();
-            let timelocks = Timelocks { data: TimelockDataStorePacking::unpack(immutables.timelocks) };
+            let timelocks = immutables.timelocks;
             
             assert(timelocks.is_before_stage(stage), TimelockErrors::TOO_LATE);
         }
